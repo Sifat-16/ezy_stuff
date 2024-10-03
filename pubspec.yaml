@@ -41,6 +41,7 @@ dependencies:
       ref: master
   http: ^1.2.2
   http_parser: ^4.0.2
+  screenshotx: ^1.0.0
 
 dev_dependencies:
   flutter_test:
