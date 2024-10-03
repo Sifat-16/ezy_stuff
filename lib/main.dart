@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -6,14 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:screen_capturer/screen_capturer.dart';
-import 'package:shell_executor/shell_executor.dart';
+import 'package:screenshotx_linux/screenshotx_linux.dart';
 
-import 'default_shell_executor.dart';
-
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  ShellExecutor.global = DefaultShellExecutor();
-  setupInitialService();
+  // ShellExecutor.global = DefaultShellExecutor();
+  await setupInitialService();
   runApp(const MyApp());
 }
 
@@ -62,6 +62,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Timer? _screenshotTimer; // Timer for automatic screenshot capturing
 
   List<Uint8List?> capturedImages = [];
+  final _screenshotxLinuxPlugin = ScreenshotXLinux();
 
   // Replace with your actual API key
   final String _apiKey = 'MCtK4B4oBnF21Jfj5rLmxPGkX9CFe3kj';
@@ -82,25 +83,46 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Function to capture screenshots
   Future<void> captureScreenshot() async {
-    try {
-      CapturedData? capturedData =
-          await screenCapturer.capture(mode: CaptureMode.screen, silent: true);
-      if (capturedData != null) {
-        setState(() {
-          // Optionally limit the number of screenshots stored
-          if (capturedImages.length >= 50) {
-            capturedImages.removeAt(0); // Remove the oldest screenshot
-          }
-          capturedImages.add(capturedData.imageBytes);
-        });
+    if (Platform.isLinux) {
+      try {
+        var image = await _screenshotxLinuxPlugin.captureFullScreen();
+        if (image != null) {
+          final pngBytes = await image.toByteData(format: ImageByteFormat.png);
+          Uint8List? imageBytes = Uint8List.view(pngBytes!.buffer);
+          setState(() {
+            // Optionally limit the number of screenshots stored
+            if (capturedImages.length >= 50) {
+              capturedImages.removeAt(0); // Remove the oldest screenshot
+            }
+            capturedImages.add(imageBytes);
+          });
 
-        uploadScreenshot(capturedImages.last!);
+          uploadScreenshot(capturedImages.last!);
+        }
+      } catch (e) {
+        print("Error while capturing screen in linux ${e.toString()}");
       }
-    } on PlatformException catch (e) {
-      // Handle exception if screenshot fails
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to capture screenshot: ${e.message}')),
-      );
+    } else {
+      try {
+        CapturedData? capturedData = await screenCapturer.capture(
+            mode: CaptureMode.screen, silent: true);
+        if (capturedData != null) {
+          setState(() {
+            // Optionally limit the number of screenshots stored
+            if (capturedImages.length >= 50) {
+              capturedImages.removeAt(0); // Remove the oldest screenshot
+            }
+            capturedImages.add(capturedData.imageBytes);
+          });
+
+          uploadScreenshot(capturedImages.last!);
+        }
+      } on PlatformException catch (e) {
+        // Handle exception if screenshot fails
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to capture screenshot: ${e.message}')),
+        );
+      }
     }
   }
 
