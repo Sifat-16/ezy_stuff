@@ -42,6 +42,7 @@ dependencies:
   http: ^1.2.2
   http_parser: ^4.0.2
   screen_capturer: ^0.2.3
+  shell_executor: ^0.1.6
 #  screenshotx: ^1.0.0
 
 dev_dependencies:

@@ -6,9 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:screen_capturer/screen_capturer.dart';
+import 'package:shell_executor/shell_executor.dart';
+
+import 'default_shell_executor.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  ShellExecutor.global = DefaultShellExecutor();
   setupInitialService();
   runApp(const MyApp());
 }
