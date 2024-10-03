@@ -1,17 +1,26 @@
 import 'dart:async';
-import 'dart:io';
-import 'dart:ui';
 
-import 'package:desktop_screenshot/desktop_screenshot.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart';
 import 'package:http_parser/http_parser.dart';
-import 'package:screenshotx/screenshotx.dart';
+import 'package:screen_capturer/screen_capturer.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  setupInitialService();
   runApp(const MyApp());
+}
+
+setupInitialService() async {
+  try {
+    bool isAllowed = await screenCapturer.isAccessAllowed();
+    if (!isAllowed) {
+      await screenCapturer.requestAccess();
+      setupInitialService();
+    }
+  } catch (e) {}
 }
 
 class MyApp extends StatelessWidget {
@@ -47,8 +56,6 @@ class _MyHomePageState extends State<MyHomePage> {
   late Stopwatch _stopwatch;
   Timer? _uiTimer;
   Timer? _screenshotTimer; // Timer for automatic screenshot capturing
-  final _desktopScreenshotPlugin = DesktopScreenshot();
-  final _screenshotX = ScreenshotX();
 
   List<Uint8List?> capturedImages = [];
 
@@ -71,42 +78,25 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Function to capture screenshots
   Future<void> captureScreenshot() async {
-    if (Platform.isLinux) {
-      var image = await _screenshotX.captureFullScreen();
-      if (image != null) {
-        final pngBytes = await image.toByteData(format: ImageByteFormat.png);
-        Uint8List? imageBytes = Uint8List.view(pngBytes!.buffer);
+    try {
+      CapturedData? capturedData =
+          await screenCapturer.capture(mode: CaptureMode.screen, silent: true);
+      if (capturedData != null) {
         setState(() {
           // Optionally limit the number of screenshots stored
           if (capturedImages.length >= 50) {
             capturedImages.removeAt(0); // Remove the oldest screenshot
           }
-          capturedImages.add(imageBytes);
+          capturedImages.add(capturedData.imageBytes);
         });
 
         uploadScreenshot(capturedImages.last!);
       }
-    } else {
-      try {
-        Uint8List? capturedData =
-            await _desktopScreenshotPlugin.getScreenshot();
-        if (capturedData != null) {
-          setState(() {
-            // Optionally limit the number of screenshots stored
-            if (capturedImages.length >= 50) {
-              capturedImages.removeAt(0); // Remove the oldest screenshot
-            }
-            capturedImages.add(capturedData);
-          });
-
-          uploadScreenshot(capturedImages.last!);
-        }
-      } on PlatformException catch (e) {
-        // Handle exception if screenshot fails
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to capture screenshot: ${e.message}')),
-        );
-      }
+    } on PlatformException catch (e) {
+      // Handle exception if screenshot fails
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to capture screenshot: ${e.message}')),
+      );
     }
   }
 
