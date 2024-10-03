@@ -43,6 +43,7 @@ dependencies:
   http_parser: ^4.0.2
   screen_capturer: ^0.2.3
   shell_executor: ^0.1.6
+  desktop_screenshot: ^0.0.2
 
 
 dev_dependencies:

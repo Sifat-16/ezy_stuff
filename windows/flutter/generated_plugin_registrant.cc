@@ -6,9 +6,12 @@
 
 #include "generated_plugin_registrant.h"
 
+#include <desktop_screenshot/desktop_screenshot_plugin_c_api.h>
 #include <screen_capturer_windows/screen_capturer_windows_plugin_c_api.h>
 
 void RegisterPlugins(flutter::PluginRegistry* registry) {
+  DesktopScreenshotPluginCApiRegisterWithRegistrar(
+      registry->GetRegistrarForPlugin("DesktopScreenshotPluginCApi"));
   ScreenCapturerWindowsPluginCApiRegisterWithRegistrar(
       registry->GetRegistrarForPlugin("ScreenCapturerWindowsPluginCApi"));
 }

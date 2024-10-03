@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 
+import 'package:desktop_screenshot/desktop_screenshot.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -62,6 +64,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Timer? _screenshotTimer; // Timer for automatic screenshot capturing
 
   List<Uint8List?> capturedImages = [];
+  final _desktopScreenshotPlugin = DesktopScreenshot();
 
   // Replace with your actual API key
   final String _apiKey = 'MCtK4B4oBnF21Jfj5rLmxPGkX9CFe3kj';
@@ -82,25 +85,48 @@ class _MyHomePageState extends State<MyHomePage> {
 
   // Function to capture screenshots
   Future<void> captureScreenshot() async {
-    try {
-      CapturedData? capturedData =
-          await screenCapturer.capture(mode: CaptureMode.screen, silent: true);
-      if (capturedData != null) {
-        setState(() {
-          // Optionally limit the number of screenshots stored
-          if (capturedImages.length >= 50) {
-            capturedImages.removeAt(0); // Remove the oldest screenshot
-          }
-          capturedImages.add(capturedData.imageBytes);
-        });
+    if (Platform.isWindows) {
+      try {
+        Uint8List? capturedData =
+            await _desktopScreenshotPlugin.getScreenshot();
+        if (capturedData != null) {
+          setState(() {
+            // Optionally limit the number of screenshots stored
+            if (capturedImages.length >= 50) {
+              capturedImages.removeAt(0); // Remove the oldest screenshot
+            }
+            capturedImages.add(capturedData);
+          });
 
-        uploadScreenshot(capturedImages.last!);
+          uploadScreenshot(capturedImages.last!);
+        }
+      } on PlatformException catch (e) {
+        // Handle exception if screenshot fails
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to capture screenshot: ${e.message}')),
+        );
       }
-    } on PlatformException catch (e) {
-      // Handle exception if screenshot fails
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to capture screenshot: ${e.message}')),
-      );
+    } else {
+      try {
+        CapturedData? capturedData = await screenCapturer.capture(
+            mode: CaptureMode.screen, silent: true);
+        if (capturedData != null) {
+          setState(() {
+            // Optionally limit the number of screenshots stored
+            if (capturedImages.length >= 50) {
+              capturedImages.removeAt(0); // Remove the oldest screenshot
+            }
+            capturedImages.add(capturedData.imageBytes);
+          });
+
+          uploadScreenshot(capturedImages.last!);
+        }
+      } on PlatformException catch (e) {
+        // Handle exception if screenshot fails
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to capture screenshot: ${e.message}')),
+        );
+      }
     }
   }
 
